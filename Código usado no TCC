@@ -1,0 +1,57 @@
+import arff
+from sklearn.ensemble import BaggingClassifier, RandomForestClassifier, StackingClassifier, AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import LinearSVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.model_selection import cross_val_score, train_test_split
+import numpy as np
+
+# Função para abrir arquivo ARFF e retornar dados
+def abre_arff(file_path):
+    with open(file_path, 'r') as f:
+        dataset = arff.load(f)
+    return dataset
+
+# Função para retornar instâncias do dataset
+def retorna_instacias(dataset):
+    data = np.array(dataset['data'])
+    X = data[:, :-1].astype(float)
+    y = data[:, -1]
+    return X, y, dataset['attributes']
+
+# Carregar o dataset
+base = abre_arff("C:\\Users\\rhobhysonn.bojko\\Desktop\\heart.arff")
+
+estimators = [
+    ('rf', RandomForestClassifier(n_estimators=10, random_state=42)),
+    ('svr', make_pipeline(StandardScaler(), LinearSVC()))
+]
+clf = StackingClassifier(estimators=estimators, final_estimator=LogisticRegression())
+clf1 = DecisionTreeClassifier(random_state=0)
+
+X, y, _ = retorna_instacias(base)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+clf.fit(X_train, y_train)
+print(len(X_train))
+print(len(X_test))
+
+bg = BaggingClassifier(estimator=clf1, n_estimators=10, random_state=0).fit(X_train, y_train)
+result_baggin = cross_val_score(bg, X_test, y_test, cv=10)
+
+result_stacking = cross_val_score(clf, X_test, y_test, cv=10)
+media_b = np.mean(result_baggin)
+media_s = np.mean(result_stacking)
+desv_b = np.std(result_baggin)
+desv_v = np.std(result_stacking)
+
+ada = AdaBoostClassifier(estimator=clf1, n_estimators=10, algorithm='SAMME', random_state=0).fit(X_train, y_train)
+result_ada = cross_val_score(ada, X_test, y_test, cv=10)
+media_a = np.mean(result_ada)
+desv_a = np.std(result_ada)
+
+print(result_baggin)
+print(result_stacking)
+print(result_ada)
+print(media_b, media_s, media_a, desv_b, desv_v, desv_a)
